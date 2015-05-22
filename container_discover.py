@@ -52,7 +52,7 @@ def get_virtual_host(array):
 def get_config():
 	opts, args = getopt.getopt(sys.argv[1:], "hl:n:p:")
 	locate = '/myapp'
-	node = '127.0.0.1'
+	node = (('202.120.80.128',2379),('202.120.80.202',2379),('202.120.80.131',2379))
 	port = 2379
 	for op, value in opts:
 		if op == "-l":
@@ -96,11 +96,21 @@ def main():
 		for k in containers:
 			a= get_container_key(k)
 			if a['virtual_host']!= None:
-				locate_write=locate+'/'+a['virtual_host']+'/'+a['container_name']
+				path=locate+'/'+a['virtual_host']
+				locate_write=path+'/'+a['container_name']
 				value_write={"address":a['Host_IP'],"port":a['container_port']}
 				value_write_json=json.dumps(value_write)
-				client.write(locate_write,value_write_json,ttl=64)
-				print time.strftime('%Y-%m-%d %H:%M:%S',time.localtime(time.time()))+" put "+locate_write+" value "+value_write_json
+				try:
+					IfPathExist=client.read(path)
+				except etcd.EtcdKeyNotFound:
+					IfPathExist=False
+				if IfPathExist==False:
+					client.write(path,0,dir=True,ttl=64) 
+					print time.strftime('%Y-%m-%d %H:%M:%S',time.localtime(time.time()))+" creat dir "+path
+					client.write(locate_write,value_write_json,ttl=64)
+				else:
+					client.write(locate_write,value_write_json,ttl=64)
+				print time.strftime('%Y-%m-%d %H:%M:%S',time.localtime(time.time()))+" put key "+locate_write+" value "+value_write_json
 		time.sleep(5)
 
 if __name__ == "__main__":
